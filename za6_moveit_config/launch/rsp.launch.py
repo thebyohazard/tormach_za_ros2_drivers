@@ -31,6 +31,7 @@ from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 
 from launch_ros.actions import Node
+from launch_ros.descriptions import ParameterValue
 
 from moveit_configs_utils import MoveItConfigsBuilder
 
@@ -41,11 +42,24 @@ from moveit_configs_utils import MoveItConfigsBuilder
 def generate_launch_description():
     """Launch file for robot state publisher (rsp)."""
     builder = MoveItConfigsBuilder("za6", package_name="za6_moveit_config")
+    builder.robot_description(None)
     moveit_config = builder.to_moveit_configs()
 
     ld = LaunchDescription()
+
     ld.add_action(
-        DeclareLaunchArgument("publish_frequency", default_value="15.0")
+        DeclareLaunchArgument(
+            "robot_description",
+            default_value="",
+            description="URDF description of the robot",
+        )
+    )
+    ld.add_action(
+        DeclareLaunchArgument(
+            "publish_frequency",
+            default_value="15.0",
+            description="Robot state publisher frequency",
+        )
     )
 
     # Given the published joint states, publish tf for the robot links and the
@@ -56,8 +70,10 @@ def generate_launch_description():
         respawn=True,
         output="screen",
         parameters=[
-            moveit_config.robot_description,
             {
+                "robot_description": ParameterValue(
+                    LaunchConfiguration('robot_description'), value_type=str
+                ),
                 "publish_frequency": LaunchConfiguration("publish_frequency"),
             },
         ],

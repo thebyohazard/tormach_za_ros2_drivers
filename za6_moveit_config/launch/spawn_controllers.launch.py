@@ -49,7 +49,6 @@ def generate_launch_description():
     ld = LaunchDescription()
 
     for controller in controller_names + ["joint_state_broadcaster"]:
-        params = controller_mgr_config.get(controller, dict())
         arguments = list(controller_args.get(controller, list()))
         arguments.append(controller)
         ld.add_action(
@@ -57,7 +56,6 @@ def generate_launch_description():
                 package="controller_manager",
                 executable="spawner",
                 arguments=arguments,
-                parameters=[params],
                 output="screen",
             )
         )

@@ -45,10 +45,18 @@ from moveit_configs_utils import MoveItConfigsBuilder
 
 def generate_launch_description():
     builder = MoveItConfigsBuilder("za6", package_name="za6_moveit_config")
+    builder.robot_description(None)
     moveit_config = builder.to_moveit_configs()
 
     ld = LaunchDescription()
 
+    ld.add_action(
+        DeclareLaunchArgument(
+            "robot_description",
+            default_value="",
+            description="URDF description of the robot",
+        )
+    )
     ld.add_action(
         DeclareBooleanLaunchArg(
             "debug",
@@ -121,6 +129,9 @@ def generate_launch_description():
         "publish_state_updates": should_publish,
         "publish_transforms_updates": should_publish,
         "monitor_dynamics": LaunchConfiguration("monitor_dynamics"),
+        "robot_description": ParameterValue(
+            LaunchConfiguration("robot_description"), value_type=str
+        ),
     }
 
     move_group_params = [

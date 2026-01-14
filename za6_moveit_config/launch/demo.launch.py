@@ -166,6 +166,9 @@ def generate_launch_description():
     ld.add_action(
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(str(launch_path / "rsp.launch.py")),
+            launch_arguments={
+                'robot_description': LaunchConfiguration("robot_description_content")
+            }.items(),
         )
     )
 
@@ -174,6 +177,9 @@ def generate_launch_description():
             PythonLaunchDescriptionSource(
                 str(launch_path / "move_group.launch.py")
             ),
+            launch_arguments={
+                'robot_description': LaunchConfiguration("robot_description_content")
+            }.items(),
         )
     )
 
@@ -203,8 +209,10 @@ def generate_launch_description():
             package="controller_manager",
             executable="ros2_control_node",
             parameters=[
-                moveit_config.robot_description,
                 str(config_path / "ros2_controllers.yaml"),
+            ],
+            remappings=[
+                ("/controller_manager/robot_description", "/robot_description"),
             ],
         )
     )
