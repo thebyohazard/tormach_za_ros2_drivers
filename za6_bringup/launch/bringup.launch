@@ -186,6 +186,7 @@
       />
   <include file="$(var moveit_config_package_launch)/rsp.launch.py">
     <arg name="publish_frequency" value="$(var publish_frequency)"/>
+    <arg name="robot_description" value="$(var robot_description_content)"/>
   </include>
 
   <!-- - Include launch for Move group -->
@@ -227,6 +228,7 @@
     <arg name="disable_capabilities" value="$(var disable_capabilities)"/>
     <arg name="publish_monitored_planning_scene" value="$(var publish_monitored_planning_scene)"/>
     <arg name="monitor_dynamics" value="$(var monitor_dynamics)"/>
+    <arg name="robot_description" value="$(var robot_description_content)"/>
   </include>
 
   <!-- - Include launch for RViz -->

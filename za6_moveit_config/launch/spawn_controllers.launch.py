@@ -46,10 +46,17 @@ def generate_launch_description():
     controller_names = controller_mgr_config.get("controller_names", [])
     controller_args = controller_mgr_config.get("controller_args", dict())
 
+    # In Jazzy, controllers use use_global_arguments=false, so they don't
+    # inherit parameters from controller_manager. Pass params file explicitly.
+    ros2_controllers_yaml = (
+        moveit_config.package_path / "config" / "ros2_controllers.yaml"
+    )
+
     ld = LaunchDescription()
 
     for controller in controller_names + ["joint_state_broadcaster"]:
         arguments = list(controller_args.get(controller, list()))
+        arguments.extend(["-p", str(ros2_controllers_yaml)])
         arguments.append(controller)
         ld.add_action(
             Node(

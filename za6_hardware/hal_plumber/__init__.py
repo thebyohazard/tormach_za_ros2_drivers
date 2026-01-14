@@ -253,6 +253,13 @@ class HALPlumber(HALPlumberBase):
         except subprocess.CalledProcessError:
             # In Jammy, this can mean the cgroup isn't yet configured
             res = None
+        except FileNotFoundError:
+            # cgroup-tools not installed, skip cgroup setup
+            self.logger.info(
+                f"'cgget' not found, skipping cgroup '{cgname}' setup "
+                "(install cgroup-tools if needed)"
+            )
+            return False
         if res:
             self.logger.info(f"Cpuset cgroup '{cgname}' exists:  {res}")
             self.isolcpus = res
@@ -383,7 +390,7 @@ class HALPlumberSim(HALPlumber):
         sim_device_data_path = self.params["sim_device_data_path"]
         self.logger.info(f"Loading device config from {sim_device_data_path}")
         self.sim_device_data = ConfigIO.load_yaml_path(sim_device_data_path)
-        self.drive_cls.init_sim(sim_device_data=self.sim_device_data)
+        self.drive_cls.init_class(sim_device_data=self.sim_device_data)
 
         super().init_plumbing()
 

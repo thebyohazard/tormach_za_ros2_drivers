@@ -108,7 +108,7 @@ class DriveState(RosHalComponent):
         if sim_mode:
             sim_dev_data_path = self.get_ros_param("sim_device_data_path", "")
             sim_dev_data = ZAHWDeviceMgr.load_yaml_path(sim_dev_data_path)
-            drv_cls.init_sim(sim_device_data=sim_dev_data)
+            drv_cls.init_class(sim_device_data=sim_dev_data)
         self.devices = drv_cls.scan_devices()
         self.logger.info(f"Drive scan found {len(self.devices)} devices:")
         for drv in self.devices:
