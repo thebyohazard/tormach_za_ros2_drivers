@@ -49,7 +49,7 @@ install_cloudsmith_repo() {
     REPO=$2
     KEY_ID=$3
     DISTRO=$(lsb_release -is)
-    CODENAME=$(lsb_release -cs)
+    CODENAME=${4:-$(lsb_release -cs)}  # Optional 4th arg overrides codename
     KEYRING_LOCATION="/usr/share/keyrings/${ORG}-${REPO}-archive-keyring.gpg"
     CLOUDSMITH_ARGS="distro=${DISTRO,}&codename=${CODENAME}"
     curl -1sLf ${BASE}/${ORG}/${REPO}/gpg.${KEY_ID}.key |
@@ -58,6 +58,7 @@ install_cloudsmith_repo() {
         >/etc/apt/sources.list.d/${ORG}-${REPO}.list
 }
 
-install_cloudsmith_repo machinekit machinekit A9B6D8B4BD8321F3
+# FIXME: No Noble packages yet; use Jammy packages
+install_cloudsmith_repo machinekit machinekit A9B6D8B4BD8321F3 jammy
 
 apt-get update

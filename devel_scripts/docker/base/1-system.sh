@@ -125,8 +125,9 @@ install_cloudsmith_repo() {
     ORG=$1
     REPO=$2
     KEY_ID=$3
+    CODENAME=${4:-${DEBIAN_SUITE}}  # Optional 4th arg overrides codename
     KEYRING_LOCATION="/usr/share/keyrings/${ORG}-${REPO}-archive-keyring.gpg"
-    CLOUDSMITH_ARGS="distro=${OS_VENDOR}&codename=${DEBIAN_SUITE}"
+    CLOUDSMITH_ARGS="distro=${OS_VENDOR}&codename=${CODENAME}"
     curl -1sLf ${BASE}/${ORG}/${REPO}/gpg.${KEY_ID}.key |
         gpg --dearmor >${KEYRING_LOCATION}
     curl -1sLf "${BASE}/${ORG}/${REPO}/config.deb.txt?${CLOUDSMITH_ARGS}" \
@@ -137,11 +138,13 @@ install_cloudsmith_repo() {
 # FIXME some problems in recent upstream releases where a new CMake build system
 # FIXME is not yet stable
 # install_cloudsmith_repo machinekit machinekit-hal D35981AB4276AC36
-install_cloudsmith_repo zultron machinekit EB6FA9FCFA405632
+# FIXME: No Noble packages yet; use Jammy packages
+install_cloudsmith_repo zultron machinekit EB6FA9FCFA405632 jammy
 # - Machinekit support package repo
-install_cloudsmith_repo machinekit machinekit A9B6D8B4BD8321F3
+install_cloudsmith_repo machinekit machinekit A9B6D8B4BD8321F3 jammy
 # - IgH EtherCAT Master and linuxcnc-ethercat HAL driver package repo
-install_cloudsmith_repo zultron etherlabmaster-test 5161F3B5339BE1C3
+# FIXME: No Noble packages yet; use Jammy packages (DKMS compiles locally)
+install_cloudsmith_repo zultron etherlabmaster-test 5161F3B5339BE1C3 jammy
 
 apt-get update
 
