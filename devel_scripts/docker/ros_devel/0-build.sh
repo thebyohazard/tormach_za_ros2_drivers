@@ -41,5 +41,6 @@ apt-get install -y \
 sed -i -e "/'kt'/ a \    \'launch\': {\'text\', \'xml\'}," \
     /usr/lib/python3/dist-packages/identify/extensions.py
 
-apt-get install -y \
-    machinekit-hal-dev
+# Installing from source for now. This was where the humble image installed the file.
+# apt-get install -y \
+#     machinekit-hal-dev

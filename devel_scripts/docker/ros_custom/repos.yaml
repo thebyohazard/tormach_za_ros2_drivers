@@ -1,5 +1,13 @@
 ---
 repositories:
+  linuxcnc-ethercat:
+    type: git
+    url: https://github.com/zultron/linuxcnc-ethercat.git
+    version: zultron/2025-07-31-fix_linker_error
+  machinekit-hal:
+    type: git
+    url: https://github.com/thebyohazard/machinekit-hal.git
+    version: noble
   hal_ros_control:
     type: git
     # url: https://github.com/tormach/hal_ros_control.git

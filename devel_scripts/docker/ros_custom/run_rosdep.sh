@@ -23,6 +23,11 @@ ROSDEP_SKIP_KEYS=(
     # Only needed for MoveIt Studio pkgs
     moveit_studio_agent
     moveit_studio_behavior
+
+    # Built from source for now via repos.yaml
+    machinekit
+    machinekit-dev
+    linuxcnc-ethercat
 )
 
 for DIR in ${WS_DIR}/src /opt/ros/${ROS_DISTRO}; do
@@ -52,4 +57,25 @@ cat ${DEPS}
 if test "$1" != no_install; then
     apt-get update
     bash -xe ${DEPS}
+
+    # Install machinekit-hal runtime dependencies
+    # Since we build machinekit-hal from source (skipped in rosdep above),
+    # we must manually install its runtime library dependencies.
+    # These are the runtime equivalents of the -dev packages in 2-install-deps.sh
+    apt-get install -y \
+        libprotobuf32t64 \
+        libczmq4 \
+        libzmq5 \
+        libjansson4 \
+        libwebsockets19t64 \
+        libavahi-client3 \
+        libmodbus5 \
+        liburiparser1
+
+    # Install additional runtime dependencies not covered by rosdep
+    apt-get install -y \
+        python3-netifaces \
+        python3-yapps \
+        yapps2 \
+        ros-${ROS_DISTRO}-sdformat-vendor
 fi

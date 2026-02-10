@@ -128,6 +128,8 @@ RUN --mount=type=cache,target=/var/cache/apt,id=ros_custom \
 # Install ROS workspace package deps
 RUN --mount=type=cache,target=/var/cache/apt,id=ros_custom \
     ros_custom/2-install-deps.sh
+# Build and install machinekit-hal (uses autotools, not cmake)
+RUN ros_custom/2.5-build-machinekit-hal.sh
 #  Build ROS workspace and install packages
 RUN --mount=type=cache,target=/ccache/ \
     ros_custom/3-build.sh
