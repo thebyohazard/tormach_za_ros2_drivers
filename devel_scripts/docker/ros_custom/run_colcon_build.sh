@@ -19,5 +19,6 @@ export CXXFLAGS=-g
 run_with_ccache \
     colcon build \
     --install-base /opt/ros/${ROS_DISTRO} --merge-install \
+    --packages-skip hal_rrbot_control \
     --cmake-args -DCMAKE_BUILD_TYPE=Release \
     --event-handlers console_cohesion+

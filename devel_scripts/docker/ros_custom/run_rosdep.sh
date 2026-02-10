@@ -28,6 +28,9 @@ ROSDEP_SKIP_KEYS=(
     machinekit
     machinekit-dev
     linuxcnc-ethercat
+
+    # Only needed for hal_rrbot_control demo, not actual robot
+    ros2_control_demo_example_1
 )
 
 for DIR in ${WS_DIR}/src /opt/ros/${ROS_DISTRO}; do
