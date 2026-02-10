@@ -23,12 +23,8 @@ curl -fsSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc |
 apt-get update
 apt-get install -y \
     python3-rosdep \
-    python3-rosinstall \
-    python3-rosinstall-generator \
-    python3-wstool \
     python3-colcon-common-extensions \
     python3-colcon-mixin \
-    python3-rosdep \
     python3-vcstool
 
 # Install rosdep file with Machinekit keys & update local database

@@ -18,14 +18,20 @@ apt-get install -y \
 ###########################
 
 # On Debian, LD_LIBRARY_PATH isn't allowed in setuid programs
+# rtapi_app runs setuid, so all library paths must be in ldconfig
 HOST_ARCH=$(dpkg-architecture -q DEB_HOST_GNU_TYPE)
 LIBRARY_PATHS=(
     /opt/ros/${ROS_DISTRO}/lib
-    /opt/ros/${ROS_DISTRO}/opt/rviz_ogre_vendor/lib
     /opt/ros/${ROS_DISTRO}/lib/${HOST_ARCH}
+    /opt/ros/${ROS_DISTRO}/opt/rviz_ogre_vendor/lib
+    /opt/ros/${ROS_DISTRO}/opt/sdformat_vendor/lib
+    /opt/ros/${ROS_DISTRO}/opt/gz_math_vendor/lib
+    /opt/ros/${ROS_DISTRO}/opt/gz_utils_vendor/lib
 )
 for LPATH in "${LIBRARY_PATHS[@]}"; do
-    echo $LPATH | tee -a /etc/ld.so.conf.d/ros-${ROS_DISTRO}.conf
+    if [ -d "$LPATH" ]; then
+        echo $LPATH | tee -a /etc/ld.so.conf.d/ros-${ROS_DISTRO}.conf
+    fi
 done
 ldconfig
 

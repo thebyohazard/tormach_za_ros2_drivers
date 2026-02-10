@@ -6,6 +6,10 @@
 WANT_ENV="docker-build docker-run"
 . $(dirname $0)/../env.sh
 set -x
+
+# PEP 668 compliance for Python 3.12+ (rosdep may install pip packages
+# like pymachinetalk and sphinxcontrib-confluencebuilder that lack apt pkgs)
+export PIP_BREAK_SYSTEM_PACKAGES=1
 BASE_SCRIPTS_DIR=${DOCKER_SCRIPTS_DIR}/base
 
 ROSDEP_SKIP_KEYS=(

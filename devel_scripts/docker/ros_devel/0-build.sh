@@ -26,29 +26,20 @@ GO111MODULE=on go install mvdan.cc/sh/v3/cmd/shfmt@v3.3.1
 # - Put executable in $PATH
 ln -s ../go/bin/shfmt /usr/local/bin/shfmt
 
-# Install CMake QA tools
-pip3 install \
-    cmake_format
-
-# Install Sphinx
-pip3 install kitchen sphinx
-
-# Install rosdoc2
-git clone https://github.com/ros-infrastructure/rosdoc2
-pip3 install ./rosdoc2
-
-# Install pre-commit and formatters
-pip3 install \
+# Install dev tools via apt (avoids PEP 668 pip restrictions on Python 3.12+)
+apt-get install -y \
+    cmake-format \
+    python3-kitchen \
+    python3-sphinx \
+    python3-rosdoc2 \
     black \
-    pre-commit
-# - Monkey-patch install module to recognize .launch files
-PY_VER=$(python3 -c 'from sys import version_info as v; print("%s.%s"%(v.major,v.minor))')
-sed -i -e "/'kt'/ a \    \'launch\': {\'text\', \'xml\'}," \
-    /usr/local/lib/python${PY_VER}/dist-packages/identify/extensions.py
-pip3 install \
-    flake8 \
-    pep8-naming
+    pre-commit \
+    python3-flake8 \
+    python3-pep8-naming
 
-# ???
+# - Monkey-patch identify module to recognize .launch files
+sed -i -e "/'kt'/ a \    \'launch\': {\'text\', \'xml\'}," \
+    /usr/lib/python3/dist-packages/identify/extensions.py
+
 apt-get install -y \
     machinekit-hal-dev

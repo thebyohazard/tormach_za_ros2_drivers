@@ -12,7 +12,7 @@ cd ${WS_DIR}
 # ROS2 build environment
 source /opt/ros/$ROS_DISTRO/setup.bash
 # - FIXME https://robotics.stackexchange.com/questions/24088/
-PYTHONPATH+=:/opt/ros/$ROS_DISTRO/local/lib/python3.10/dist-packages
+PYTHONPATH+=:/opt/ros/$ROS_DISTRO/local/lib/python3.12/dist-packages
 
 # Build packages into install space
 export CXXFLAGS=-g

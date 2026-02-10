@@ -8,8 +8,7 @@ cd ros_d_common
 ###########################
 # Set up supervisord
 ###########################
-pip3 install \
-    supervisor==4.2.2
+apt-get install -y supervisor
 
 mkdir -p \
     /etc/pathpilot \
@@ -22,7 +21,7 @@ cp supervisord.conf /etc/pathpilot/
 git clone https://github.com/zultron/supervisor-stdout
 (
     cd supervisor-stdout
-    python3 setup.py install
+    PIP_BREAK_SYSTEM_PACKAGES=1 python3 setup.py install
 )
 rm -rf supervisor-stdout
 

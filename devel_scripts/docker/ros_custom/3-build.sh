@@ -22,10 +22,10 @@ mkdir -p $DESTDIR/usr/lib/machinekit/modules
 DESTDIR=$DESTDIR ${ROS_CUSTOM_SCRIPTS_DIR}/run_colcon_build.sh
 # - hw_device_mgr:  Pure Python package doesn't honor DESTDIR, apparently
 PKG_RESOURCES=(
-    /opt/ros/humble/share/ament_index/resource_index/packages/hw_device_mgr
-    /opt/ros/humble/share/hw_device_mgr
-    /opt/ros/humble/share/colcon-core/packages/hw_device_mgr
-    /opt/ros/humble/lib/python3.10/site-packages/hw_device_mgr*
+    /opt/ros/${ROS_DISTRO}/share/ament_index/resource_index/packages/hw_device_mgr
+    /opt/ros/${ROS_DISTRO}/share/hw_device_mgr
+    /opt/ros/${ROS_DISTRO}/share/colcon-core/packages/hw_device_mgr
+    /opt/ros/${ROS_DISTRO}/lib/python3.12/site-packages/hw_device_mgr*
 )
 for i in "${PKG_RESOURCES[@]}"; do
     mkdir -p $DESTDIR/$(dirname $i)

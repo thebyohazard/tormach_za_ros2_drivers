@@ -1,9 +1,9 @@
 # Set up environment parameters in Docker scripts
 
 # Defaults
-DEFAULT_ROS_DISTRO=humble
+DEFAULT_ROS_DISTRO=jazzy
 DEFAULT_OS_VENDOR=ubuntu
-DEFAULT_DEBIAN_SUITE=jammy
+DEFAULT_DEBIAN_SUITE=noble
 
 # Directory paths
 # - The devel_scripts/docker directory

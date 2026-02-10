@@ -13,6 +13,7 @@ python-pint:
     pip:
       package: [pint]
   ubuntu:
+    noble: [python3-pint]
     pip:
       packages: [pint]
 oxygen-icon-theme:
@@ -39,6 +40,7 @@ python3-semver:
     pip:
       packages: [semver]
   ubuntu:
+    noble: [python3-semver]
     pip:
       packages: [semver]
 python3-sphinxcontrib-confluencebuilder:
@@ -56,6 +58,7 @@ python3-dbus-next:
     pip:
       packages: [dbus-next]
   ubuntu:
+    noble: [python3-dbus-next]
     pip:
       packages: [dbus-next]
 python3-aiohttp:
@@ -63,6 +66,7 @@ python3-aiohttp:
     pip:
       packages: [aiohttp]
   ubuntu:
+    noble: [python3-aiohttp]
     pip:
       packages: [aiohttp]
 
@@ -86,6 +90,7 @@ python3-redis:
 # https://github.com/ros/rosdistro/pull/36888
 python-attrs-pip:
   ubuntu:
+    noble: [python3-attr]
     pip:
       packages: [attrs]
 
@@ -94,8 +99,7 @@ python-attrs-pip:
 python3-qt5-bindings-quick:
   debian: [python3-pyqt5.qtquick]
   ubuntu: [python3-pyqt5.qtquick]
-# - Has python-pytest-qt-pip; good enough?
-python3-pytest-qt:
+python-pytest-qt-pip:
   debian: [python3-pytestqt]
   ubuntu: [python3-pytestqt]
 # - Not in upstream rosdep
@@ -134,6 +138,7 @@ python3-qasync:
     pip:
       packages: [qasync]
   ubuntu:
+    noble: [python3-qasync]
     pip:
       packages: [qasync]
 udisks2:
