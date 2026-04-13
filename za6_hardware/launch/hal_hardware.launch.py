@@ -27,7 +27,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, GroupAction, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.conditions import IfCondition, UnlessCondition
 from launch.substitutions import (
     LaunchConfiguration,
@@ -35,7 +35,7 @@ from launch.substitutions import (
     PythonExpression,
 )
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch_ros.actions import Node, PushRosNamespace
+from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from launch_ros.descriptions import ParameterValue
 
@@ -449,23 +449,21 @@ def generate_launch_description():
             condition=IfCondition(LaunchConfiguration("use_fake_hardware")),
         ),
         # Launch joint_trajectory_controller and joint_state_broadcaster.
-        # GroupAction + PushRosNamespace ensures spawner nodes land in the correct
-        # namespace so they resolve "controller_manager" relative to that namespace.
-        GroupAction([
-            PushRosNamespace(LaunchConfiguration("namespace")),
-            IncludeLaunchDescription(
-                PythonLaunchDescriptionSource(
-                    PathJoinSubstitution([
-                        FindPackageShare(LaunchConfiguration("spawn_controllers_pkg")),
-                        "launch",
-                        "spawn_controllers.launch.py",
-                    ])
-                ),
-                launch_arguments={
-                    "namespace": LaunchConfiguration("namespace"),
-                }.items(),
+        # spawn_controllers.launch.py sets namespace= explicitly on spawner nodes
+        # and passes --controller-manager as an absolute path, so PushRosNamespace
+        # is not needed and would double-apply the namespace.
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                PathJoinSubstitution([
+                    FindPackageShare(LaunchConfiguration("spawn_controllers_pkg")),
+                    "launch",
+                    "spawn_controllers.launch.py",
+                ])
             ),
-        ]),
+            launch_arguments={
+                "namespace": LaunchConfiguration("namespace"),
+            }.items(),
+        ),
     ]
 
     return LaunchDescription(launch_entities)
