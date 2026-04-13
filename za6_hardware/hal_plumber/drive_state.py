@@ -272,7 +272,7 @@ class DriveState(RosHalComponent):
                 self.check_timeout()
             self.logger.info("Successfully zeroed command error")
         except StateError as e:
-            self.logger.error(f"Zero command-feedback error:  {e.msg}")
+            self.logger.error(f"Zero command-feedback error:  {e}")
             raise
         finally:
             self.load.set(False)

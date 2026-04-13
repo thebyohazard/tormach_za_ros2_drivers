@@ -27,7 +27,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, GroupAction, IncludeLaunchDescription
 from launch.conditions import IfCondition, UnlessCondition
 from launch.substitutions import (
     LaunchConfiguration,
@@ -35,7 +35,7 @@ from launch.substitutions import (
     PythonExpression,
 )
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch_ros.actions import Node
+from launch_ros.actions import Node, PushRosNamespace
 from launch_ros.substitutions import FindPackageShare
 from launch_ros.descriptions import ParameterValue
 
@@ -229,6 +229,24 @@ def generate_launch_description():
             default_value="/joint_trajectory_controller/joint_trajectory",
         ),
         DeclareLaunchArgument(
+            "namespace",
+            default_value="",
+            description=(
+                "ROS namespace for all HAL hardware nodes and controller spawners. "
+                "Set to empty string to deploy at root. "
+                "Must match the namespace of robot_state_publisher and move_group."
+            ),
+        ),
+        DeclareLaunchArgument(
+            "spawn_controllers_pkg",
+            default_value="za6_moveit_config",
+            description=(
+                "Package containing spawn_controllers.launch.py. "
+                "Override to use a custom spawn_controllers with namespace support "
+                "(e.g. nutting_za6_config)."
+            ),
+        ),
+        DeclareLaunchArgument(
             "drive_state_timeout",
             description="Timeout for drive enable/disable services.",
             default_value="10",
@@ -240,6 +258,7 @@ def generate_launch_description():
         ),
         # HAL configuration & controller manager
         HalConfig(
+            namespace=LaunchConfiguration("namespace"),
             # hal_mgr args
             parameters=[
                 dict(  # Individual keys
@@ -255,6 +274,7 @@ def generate_launch_description():
                 HalRTNode(
                     package="hal_hw_interface",
                     component="hal_control_node",
+                    namespace=LaunchConfiguration("namespace"),
                     parameters=[  # ROS parameters from various sources
                         # Individual keys
                         dict(
@@ -278,6 +298,7 @@ def generate_launch_description():
                 HalUserNode(
                     package=hw_pkg_name,
                     executable="hw_device_mgr",
+                    namespace=LaunchConfiguration("namespace"),
                     parameters=[
                         dict(  # One-off params
                             # File with HAL device configuration
@@ -320,6 +341,7 @@ def generate_launch_description():
                 HalUserNode(
                     package="hal_hw_interface",
                     executable="hal_io",
+                    namespace=LaunchConfiguration("namespace"),
                     log_cmd=True,
                     output="both",
                     emulate_tty=True,
@@ -345,6 +367,7 @@ def generate_launch_description():
                 HalUserNode(
                     package="za6_hardware",
                     executable="drive_state",
+                    namespace=LaunchConfiguration("namespace"),
                     parameters=[
                         dict(
                             update_rate=LaunchConfiguration(
@@ -410,6 +433,7 @@ def generate_launch_description():
         Node(
             package="controller_manager",
             executable="ros2_control_node",
+            namespace=LaunchConfiguration("namespace"),
             parameters=[  # ROS parameters from various sources
                 # Individual keys
                 dict(
@@ -424,18 +448,24 @@ def generate_launch_description():
             output="screen",
             condition=IfCondition(LaunchConfiguration("use_fake_hardware")),
         ),
-        # Launch joint_trajectory_controller and joint_state_broadcaster
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                PathJoinSubstitution(
-                    [
-                        moveit_pkg_share,
+        # Launch joint_trajectory_controller and joint_state_broadcaster.
+        # GroupAction + PushRosNamespace ensures spawner nodes land in the correct
+        # namespace so they resolve "controller_manager" relative to that namespace.
+        GroupAction([
+            PushRosNamespace(LaunchConfiguration("namespace")),
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    PathJoinSubstitution([
+                        FindPackageShare(LaunchConfiguration("spawn_controllers_pkg")),
                         "launch",
                         "spawn_controllers.launch.py",
-                    ]
-                )
+                    ])
+                ),
+                launch_arguments={
+                    "namespace": LaunchConfiguration("namespace"),
+                }.items(),
             ),
-        ),
+        ]),
     ]
 
     return LaunchDescription(launch_entities)
