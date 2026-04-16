@@ -320,6 +320,9 @@ class DriveState(RosHalComponent):
         }
 
     def set_state(self, state):
+        # Sync _prev_state_fb so check_entered_fault_state only reacts to
+        # faults that occur during this call, not a stale pre-existing fault.
+        self._prev_state_fb = self.state_fb.get()
         # Kick off new state command
         self.set_state_start(state)
         # Loop until complete or timeout, or fault
