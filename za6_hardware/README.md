@@ -56,14 +56,22 @@ console.
 
 **DO NOT CALL `/home_joint` UNDER ANY CIRCUMSTANCES unless you are
 performing a deliberate, supervised mastering procedure with the
-factory mastering sensor in hand.**
+factory mastering fixture in hand.**
 
-The `/home_joint` service re-masters the selected joint's zero
-reference to its CURRENT physical position and **OVERWRITES the
-factory-calibrated zero** stored in the Inovance servo drive
-(`607Ch` / `2005-2Fh` / `2005-31h`).  Restoring factory calibration
-requires a mastering sensor that is not kept on hand — an accidental
-call takes the arm out of service.
+The `/home_joint` service triggers the drive's CiA 402 homing
+procedure (`6098h = 35`: "current position is home").  On a fresh
+ZA6, the drive-side zero-offset registers (`607Ch`, `2005-2Fh`,
+`2005-31h`, `2005-25h`) are all zero — the drive's concept of
+"zero" is the encoder's absolute zero, and physical zero is
+maintained mechanically by the URDF and the arm's physical
+assembly.  Calling `/home_joint` will write a **non-zero offset**
+into those drive-EEPROM registers, based on whatever pose the
+joint happens to be in at the moment of the call, redefining the
+drive's reported zero to that pose.  Until the offset is restored
+(via SDO write from a snapshot, or by re-mastering with the
+fixture), all subsequent `joint_states` for that joint will be
+wrong by the offset amount.  Recovery without the fixture is only
+possible if a pre-event snapshot exists.
 
 Protections in place:
 
@@ -100,62 +108,65 @@ persist comm writes") setting with its own internal write.  See the
 SV660N series user guide (`doc/sv660n_series.pdf`, section 7.11.2,
 p. 280).  Snapshot-based restore is the only recovery path.
 
-### Before mastering: check the encoder battery
+### If a joint is reading off by a few degrees
+
+**Do not assume the drive's zero reference is the cause.**  On this
+arm, historically, joint-position problems have originated in the
+ROS stack rather than in the drive (drive parameters overwritten
+with wrong values due to init-order bugs, EtherCAT master version
+mismatch, YAML drift between ROS 1 and ROS 2 versions, mechanical
+shifts, etc.).  See
+`jlp_documentation/za6_drive_eeprom_init_order.md` for a writeup of
+one such bug.
+
+Rule out the drive-side zero offset first:
+
+    ros2 run za6_hardware dump_params <drive_pos>
+
+and check that `607Ch`, `2005-25h`, `2005-2Fh`, and `2005-31h` all
+equal `0`.  If they do, the drive's zero reference is untouched and
+the problem is elsewhere (ROS YAML, URDF, HAL, or mechanical).
+
+#### Secondary hypothesis: encoder battery
 
 The 23-bit multi-turn absolute encoder is backed by an external
 **S6-C36 battery box (3.6 V / 2600 mAh)**.  Inovance recommends
-**replacing the battery every two years** (see `doc/sv660n_series.pdf`,
-section 3, p. 52–53).  A dead battery while the drive is powered off
-resets the multi-turn counter, causing the joint to read off by an
-integer number of motor revolutions — with a 100:1 reducer (joint 2)
-that is ~3.6° per lost revolution; with 80:1 (joint 3), ~4.5°.
+replacing the battery every two years (`doc/sv660n_series.pdf` §3,
+p. 52–53).  A dead battery while the drive is powered off resets
+the multi-turn counter, and the joint can read off by an integer
+number of motor revolutions — with the 100:1 reducer on joint 2,
+that's ~3.6° per lost revolution; with 80:1 on joint 3, ~4.5°.
+The drive reports this condition as fault **E735.0** (Encoder
+multi-turn counting overflow) in `603Fh`.  If `603Fh = 0x0000` on
+all drives, multi-turn loss is not the cause.
 
-This is the most plausible root cause when "a joint is suddenly off
-by a few degrees."  However, **recovery on this robot is not simple**,
-because:
+#### If mastering is genuinely needed
 
-- **There is no home switch.**  `hal_device_config.yaml` assigns
-  `FunIN.31` (Home switch) to no DI on any drive; all DIs are set to
-  `0` (No definition) or left unused.
-- **The configured homing method is `6098h = 35`**: *"the present
-  position is taken as the mechanical home"* (SV660N manual §7.11,
-  homing mode 35).  The drive's "homing" procedure uses whatever
-  physical pose the joint happens to be in at the moment it is
-  triggered — there is no independent mechanical reference.
+This robot has **no home switch** (`hal_device_config.yaml` assigns
+`FunIN.31` to no DI) and the configured homing method is
+`6098h = 35` (present position is mechanical home).  There is no
+automated home-switch-based homing available.  Re-establishing
+true joint zero requires the operator to physically position the
+joint at the factory-calibrated zero pose using a mastering
+fixture, then call `/home_joint`.
 
-That means re-establishing true joint zero after multi-turn data is
-lost requires the operator to **physically position the joint at the
-factory-calibrated zero pose first**, using the mastering fixture /
-sensor.  That is the same fixture needed for a full re-master, and
-it is not kept on hand.
+Recovery options in order of preference:
 
-So: diagnose the battery first (an E735.0 fault, or a dead cell in
-the S6-C36 battery box, confirms it), but understand that there is
-no free recovery path on this robot.  The options are, in order of
-preference:
-
-1. **If a pre-event snapshot exists** (written by a previous
-   `/home_joint` call, or a deliberate preventive snapshot — see
-   below): restore `607Ch`, `2005-2Fh`, `2005-31h` via manual SDO
-   writes, replace the battery, then power-cycle.  No re-mastering
-   needed.
-2. **If no snapshot exists but the multi-turn data is intact** (no
-   E735 fault, battery healthy): do nothing to the zero reference —
-   the offset is almost certainly *not* the problem.
-3. **If no snapshot exists and multi-turn data is lost** (E735 /
-   battery dead): you need the mastering fixture.  Replace battery,
-   reset with `200D-15h = 2`, acquire fixture, then re-master via
-   `MASTERING_ENABLED:=true` + `/home_joint`.  No shortcut.
+1. **If a pre-event snapshot exists**: restore `607Ch`,
+   `2005-2Fh`, `2005-31h` via manual SDO writes, power-cycle.  No
+   fixture required.
+2. **Acquire the mastering fixture**, physically align the joint,
+   launch with `MASTERING_ENABLED:=true`, then call `/home_joint`.
 
 ### Preventive snapshot (recommended)
 
-Because the snapshot mechanism only runs as part of `/home_joint`, a
+Because the automatic snapshot only runs as part of `/home_joint`, a
 healthy robot has no snapshot on disk.  To create one preventively,
 run `ros2 run za6_hardware dump_params <drive_pos>` for each of the
-six drives (0–5) and save the output.  That gives a manual recovery
-reference if a battery fails before a snapshot ever gets auto-written.
-Storing those dumps somewhere outside the robot (git, shared drive)
-is advisable.
+six drives (0–5) and archive the output off-robot (git, shared
+drive).  This is the insurance policy against a future mistaken
+`/home_joint` call, drive replacement, or unexpected EEPROM
+corruption.
 
 If you genuinely need to re-master a joint (you have the mastering
 sensor, you have authorization, you know what you are doing):

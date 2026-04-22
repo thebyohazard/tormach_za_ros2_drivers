@@ -474,9 +474,12 @@ class DriveState(RosHalComponent):
             "WARNING": (
                 "Pre-mastering snapshot of drive parameters. "
                 "The /home_joint service was invoked and was about to "
-                "OVERWRITE the factory-calibrated zero reference on the "
-                "joint listed below. Keep this file — it is the only "
-                "record of the pre-mastering register values."
+                "write a non-zero offset into the drive's EEPROM, "
+                "redefining the drive's zero reference for the joint "
+                "listed below. Keep this file — it is the only record "
+                "of the pre-mastering register values (in particular "
+                "607Ch, 2005-2Fh, 2005-31h, 2005-25h), which are "
+                "needed to restore the previous zero via SDO write."
             ),
             "timestamp": timestamp,
             "hostname": socket.gethostname(),
@@ -500,11 +503,16 @@ class DriveState(RosHalComponent):
 
     def home_joint(self, joint_idx):
         # ⚠️ DANGER: Re-masters the joint's zero reference to its CURRENT
-        # physical position by asserting the drive's home_request pin.  This
-        # OVERWRITES the factory-calibrated zero stored in the Inovance servo
-        # drive.  Restoring factory calibration requires a special mastering
-        # sensor that is not kept on hand.  DO NOT call unless you are
-        # performing a deliberate, supervised mastering procedure.
+        # physical position by asserting the drive's home_request pin.
+        # This writes a non-zero value into the drive's 2005-2Fh / 2005-31h
+        # absolute-linear-mode offset registers and persists them to
+        # EEPROM via the drive's internal save path.  Until restored
+        # manually (via SDO write from a snapshot or re-mastered via
+        # fixture), the drive will report "zero" as the joint pose at
+        # the moment of this call, instead of the encoder's absolute
+        # zero.  DO NOT call unless you are performing a deliberate,
+        # supervised mastering procedure with the mastering fixture
+        # in hand.
         # Home **joint** service; drive index is one less than joint index
         drv_idx = joint_idx - 1
         assert drv_idx in self.home_pins
@@ -545,8 +553,9 @@ class DriveState(RosHalComponent):
         # calibration.  Only reachable when MASTERING_ENABLED ROS param is
         # True (see init_home_service).
         self.logger.warning(
-            f"/{self.home_svc_name} service called — about to OVERWRITE "
-            f"factory-calibrated zero on joint {req.data}"
+            f"/{self.home_svc_name} service called — about to write a "
+            f"non-zero offset to drive EEPROM, redefining zero on joint "
+            f"{req.data}"
         )
         self.logger.info(f"/{self.home_svc_name} service called")
         joint_idx = req.data
@@ -582,24 +591,40 @@ class DriveState(RosHalComponent):
         return rsp
 
     def init_home_service(self):
-        # ⚠️ DANGER: The /home_joint service re-masters a joint's zero to its
-        # CURRENT position, destroying the factory-calibrated zero stored in
-        # the Inovance servo drive (607Ch / 2005-2Fh / 2005-31h).  Restoring
-        # factory calibration requires a special sensor we do not keep on
-        # hand.  The service is therefore gated behind an explicit
-        # MASTERING_ENABLED ROS parameter (default FALSE) so that it cannot
-        # exist on the ROS graph unless a technician deliberately enables it
-        # for a mastering session.  DO NOT default this to True.  DO NOT
-        # call /home_joint unless you have the mastering sensor in hand and
-        # intend to re-master.
+        # ⚠️ DANGER: The /home_joint service triggers the drive's CiA 402
+        # homing procedure (mode 35: "current position is home"), which
+        # writes a non-zero offset into the drive's 2005-2Fh / 2005-31h
+        # (absolute position offset, linear mode) registers and, per the
+        # SV660N manual §7.11.2, auto-persists them to drive EEPROM via
+        # the drive's internal save path (bypassing 200E-02h = 0).
+        #
+        # On a fresh / factory-state ZA6, 607Ch and 2005-2Fh/31h are all
+        # zero — the drive's zero reference IS the encoder's absolute
+        # zero, and physical zero is aligned mechanically.  Calling
+        # /home_joint will set those registers to non-zero values based
+        # on whatever pose the joint happens to be in, redefining the
+        # drive's concept of "zero" to that pose.  Recovering requires
+        # either a pre-event parameter snapshot (written by
+        # _snapshot_mastering_state) or physically returning the joint
+        # to its factory-aligned zero pose using a mastering fixture
+        # (which is not kept on hand here).
+        #
+        # The service is therefore gated behind an explicit
+        # MASTERING_ENABLED ROS parameter (default FALSE) so that it
+        # cannot exist on the ROS graph unless a technician deliberately
+        # enables it for a mastering session.  DO NOT default this to
+        # True.  DO NOT call /home_joint unless you have the mastering
+        # fixture in hand and intend to re-master.
         mastering_enabled = self.get_ros_param("MASTERING_ENABLED", False)
         if not mastering_enabled:
             self.home_svc = None
             return
         self.logger.warning(
             f"⚠️  MASTERING_ENABLED is TRUE — /{self.home_svc_name} service "
-            "will be created. Calling it will OVERWRITE factory-calibrated "
-            "joint zero on the target drive."
+            "will be created. Calling it will write a non-zero offset into "
+            "drive EEPROM (2005-2Fh/2005-31h), redefining the drive's zero "
+            "reference to the joint's current pose. Ensure the mastering "
+            "fixture is installed before calling."
         )
         self.home_svc = self.node.create_service(
             SetUInt32,

@@ -260,12 +260,17 @@ def generate_launch_description():
             "MASTERING_ENABLED",
             description=(
                 "⚠️ DANGER: When true, creates the /home_joint service, "
-                "which re-masters a joint's zero to its CURRENT position "
-                "and OVERWRITES the factory-calibrated zero stored in the "
-                "Inovance servo drive. Restoring factory calibration "
-                "requires a mastering sensor that is not kept on hand. "
-                "ONLY set this true during a deliberate, supervised "
-                "mastering procedure. Default: false."
+                "which triggers the drive's CiA 402 homing procedure. "
+                "On a fresh ZA6 the drive-side zero-offset registers "
+                "(607Ch / 2005-2Fh / 2005-31h) are zero; calling "
+                "/home_joint writes a non-zero offset into EEPROM, "
+                "redefining the drive's zero to the joint's current "
+                "pose. Recovery requires either a pre-event snapshot "
+                "(written automatically before each /home_joint call) "
+                "or a mastering fixture to physically align the joint "
+                "to its original zero. ONLY set this true during a "
+                "deliberate, supervised mastering procedure with the "
+                "fixture in hand. Default: false."
             ),
             default_value="false",
         ),
