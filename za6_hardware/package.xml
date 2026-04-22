@@ -17,6 +17,7 @@
   <build_export_depend>hal_hw_interface</build_export_depend>
 
   <exec_depend>rclpy</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
   <exec_depend>hw_device_mgr</exec_depend>
   <exec_depend>hal_hw_interface</exec_depend>
   <exec_depend>linuxcnc-ethercat</exec_depend>

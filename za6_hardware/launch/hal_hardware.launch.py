@@ -256,6 +256,29 @@ def generate_launch_description():
             description="Update rate for drive state service node (Hz).",
             default_value="10",
         ),
+        DeclareLaunchArgument(
+            "MASTERING_ENABLED",
+            description=(
+                "⚠️ DANGER: When true, creates the /home_joint service, "
+                "which re-masters a joint's zero to its CURRENT position "
+                "and OVERWRITES the factory-calibrated zero stored in the "
+                "Inovance servo drive. Restoring factory calibration "
+                "requires a mastering sensor that is not kept on hand. "
+                "ONLY set this true during a deliberate, supervised "
+                "mastering procedure. Default: false."
+            ),
+            default_value="false",
+        ),
+        DeclareLaunchArgument(
+            "MASTERING_SNAPSHOT_DIR",
+            description=(
+                "Directory where pre-mastering drive parameter snapshots "
+                "are written before each /home_joint call.  One YAML file "
+                "per call, timestamped, never overwritten.  Irrelevant "
+                "unless MASTERING_ENABLED is true."
+            ),
+            default_value="~/.ros/za6_mastering_snapshots",
+        ),
         # HAL configuration & controller manager
         HalConfig(
             namespace=LaunchConfiguration("namespace"),
@@ -374,6 +397,14 @@ def generate_launch_description():
                                 "drive_state_update_rate"
                             ),
                             timeout=LaunchConfiguration("drive_state_timeout"),
+                            # ⚠️ DANGER: Gates /home_joint service creation.
+                            # See the MASTERING_ENABLED launch arg above.
+                            MASTERING_ENABLED=LaunchConfiguration(
+                                "MASTERING_ENABLED"
+                            ),
+                            MASTERING_SNAPSHOT_DIR=LaunchConfiguration(
+                                "MASTERING_SNAPSHOT_DIR"
+                            ),
                             joint_trajectory_topic=LaunchConfiguration(
                                 "joint_trajectory_topic"
                             ),

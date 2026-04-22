@@ -34,10 +34,33 @@ from std_srvs.srv import Trigger
 from hal_hw_interface_msgs.srv import SetUInt32
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 import time
+import os
+import socket
+import datetime
+import yaml
 import attr
 import traceback
 from enum import Enum
 from functools import cached_property
+
+
+# ⚠️ SDOs whose values define the drive's zero reference / mastering.
+# These are captured explicitly in the mastering snapshot so the pre-
+# mastering values are easy to find and, eventually, restore.
+# (The full parameter dump is also saved alongside.)
+MASTERING_REGISTER_SDOS = (
+    '607Ch',     # Home offset (CiA 402 standard)
+    '2005-25h',  # Local home offset
+    '2005-2Fh',  # Position offset in absolute position linear mode (low 32 bits)
+    '2005-31h',  # Position offset in absolute position linear mode (high 32 bits)
+    '2005-33h',  # Mechanical gear ratio numerator (absolute rotation mode)
+    '2005-34h',  # Mechanical gear ratio denominator (absolute rotation mode)
+    '2005-35h',  # Pulses per load revolution, low 32 bits
+    '2005-36h',  # Pulses per load revolution, high (if present)
+    '2002-02h',  # Absolute encoder system selection
+    '6064h',     # Current position_actual_value (for sanity)
+    '60E6h',     # Actual position calculation method (abs vs relative homing)
+)
 
 
 class SvcState(Enum):
@@ -411,11 +434,86 @@ class DriveState(RosHalComponent):
         self.home_pins[joint_idx - 1]["home_request"].set(False)
         self.force_brakes(self.devices[joint_idx - 1], engage=False)
 
+    def _snapshot_mastering_state(self, joint_idx, drv_idx):
+        # Snapshot the pre-mastering state of the target drive so that a
+        # mistaken /home_joint call can be investigated and (eventually)
+        # reverted.  Writes a timestamped YAML file to
+        # MASTERING_SNAPSHOT_DIR containing:
+        #   - identifying metadata (host, ROS time, joint/drive idx, device)
+        #   - the mastering-critical SDO values (MASTERING_REGISTER_SDOS)
+        #   - a full parameter dump (equivalent to `ros2 run za6_hardware
+        #     dump_params <drv_idx>`)
+        # If the snapshot cannot be written, this method raises and the
+        # mastering operation MUST abort — failing safe is the whole point.
+        snapshot_dir = self.get_ros_param(
+            "MASTERING_SNAPSHOT_DIR",
+            os.path.expanduser("~/.ros/za6_mastering_snapshots"),
+        )
+        os.makedirs(snapshot_dir, exist_ok=True)
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
+        snapshot_path = os.path.join(
+            snapshot_dir, f"{timestamp}_joint{joint_idx}.yaml"
+        )
+
+        device = self.devices[drv_idx]
+        # Full parameter dump — may be slow (per-SDO uploads), acceptable
+        # at mastering time.  Same API as the dump_params CLI script.
+        full_dump = {
+            str(sdo): str(val)
+            for sdo, val in device.config.dump_param_values().items()
+        }
+        # Pull out the mastering-critical subset for prominence.  Look up
+        # against the dump rather than re-reading to avoid duplicate SDO
+        # traffic.
+        mastering_registers = {
+            sdo: full_dump.get(sdo, "<not in dump>")
+            for sdo in MASTERING_REGISTER_SDOS
+        }
+
+        snapshot = {
+            "WARNING": (
+                "Pre-mastering snapshot of drive parameters. "
+                "The /home_joint service was invoked and was about to "
+                "OVERWRITE the factory-calibrated zero reference on the "
+                "joint listed below. Keep this file — it is the only "
+                "record of the pre-mastering register values."
+            ),
+            "timestamp": timestamp,
+            "hostname": socket.gethostname(),
+            "ros_time_ns": self.node.get_clock().now().nanoseconds,
+            "joint_idx": joint_idx,
+            "drive_idx": drv_idx,
+            "device": str(device),
+            "device_name": getattr(device, "name", None),
+            "current_pos_fb_rad": self.home_pins[drv_idx]["pos_fb"].get(),
+            "current_pos_cmd_rad": self.home_pins[drv_idx]["pos_cmd"].get(),
+            "mastering_registers": mastering_registers,
+            "full_parameter_dump": full_dump,
+        }
+
+        with open(snapshot_path, "w") as f:
+            yaml.safe_dump(snapshot, f, sort_keys=False, default_flow_style=False)
+        self.logger.warning(
+            f"Pre-mastering snapshot written: {snapshot_path}"
+        )
+        return snapshot_path
+
     def home_joint(self, joint_idx):
+        # ⚠️ DANGER: Re-masters the joint's zero reference to its CURRENT
+        # physical position by asserting the drive's home_request pin.  This
+        # OVERWRITES the factory-calibrated zero stored in the Inovance servo
+        # drive.  Restoring factory calibration requires a special mastering
+        # sensor that is not kept on hand.  DO NOT call unless you are
+        # performing a deliberate, supervised mastering procedure.
         # Home **joint** service; drive index is one less than joint index
         drv_idx = joint_idx - 1
         assert drv_idx in self.home_pins
         pins = self.home_pins[drv_idx]
+        # ⚠️ Take a snapshot of pre-mastering state BEFORE doing anything
+        # destructive.  If the snapshot fails, abort — we will not master
+        # without a recoverable record of the previous values.
+        snapshot_path = self._snapshot_mastering_state(joint_idx, drv_idx)
+        self._last_snapshot_path = snapshot_path
         # Set brake; Inovance drives stop holding position in HM mode
         self.force_brakes(self.devices[drv_idx], engage=True)
         # Hold home_request high
@@ -443,23 +541,66 @@ class DriveState(RosHalComponent):
             time.sleep(self.update_per)
 
     def home_svc_cb(self, req, rsp):
+        # ⚠️ DANGER: See home_joint() — this callback destroys factory
+        # calibration.  Only reachable when MASTERING_ENABLED ROS param is
+        # True (see init_home_service).
+        self.logger.warning(
+            f"/{self.home_svc_name} service called — about to OVERWRITE "
+            f"factory-calibrated zero on joint {req.data}"
+        )
         self.logger.info(f"/{self.home_svc_name} service called")
         joint_idx = req.data
+        self._last_snapshot_path = None
         try:
             rsp.success = self.home_joint(req.data)
+            snapshot_note = (
+                f" Pre-mastering snapshot: {self._last_snapshot_path}"
+                if self._last_snapshot_path
+                else ""
+            )
             if rsp.success:
-                rsp.message = f"Joint {joint_idx} homed successfully"
+                rsp.message = (
+                    f"Joint {joint_idx} homed successfully.{snapshot_note}"
+                )
             else:
-                rsp.message = f"Joint {joint_idx} homing failed"
+                rsp.message = (
+                    f"Joint {joint_idx} homing failed.{snapshot_note}"
+                )
         except Exception as e:
             self.home_cleanup(joint_idx)
             self.logger.error(traceback.format_exc())
-            rsp.success, rsp.message = False, f"Exception:  {e} ({str(e)})"
+            snapshot_note = (
+                f" Pre-mastering snapshot: {self._last_snapshot_path}"
+                if self._last_snapshot_path
+                else " (no snapshot written — mastering aborted before drive state was altered)"
+            )
+            rsp.success, rsp.message = (
+                False,
+                f"Exception:  {e} ({str(e)}).{snapshot_note}",
+            )
         self.logger.info(f"/{self.home_svc_name} service completed")
         return rsp
 
     def init_home_service(self):
-        # Home service
+        # ⚠️ DANGER: The /home_joint service re-masters a joint's zero to its
+        # CURRENT position, destroying the factory-calibrated zero stored in
+        # the Inovance servo drive (607Ch / 2005-2Fh / 2005-31h).  Restoring
+        # factory calibration requires a special sensor we do not keep on
+        # hand.  The service is therefore gated behind an explicit
+        # MASTERING_ENABLED ROS parameter (default FALSE) so that it cannot
+        # exist on the ROS graph unless a technician deliberately enables it
+        # for a mastering session.  DO NOT default this to True.  DO NOT
+        # call /home_joint unless you have the mastering sensor in hand and
+        # intend to re-master.
+        mastering_enabled = self.get_ros_param("MASTERING_ENABLED", False)
+        if not mastering_enabled:
+            self.home_svc = None
+            return
+        self.logger.warning(
+            f"⚠️  MASTERING_ENABLED is TRUE — /{self.home_svc_name} service "
+            "will be created. Calling it will OVERWRITE factory-calibrated "
+            "joint zero on the target drive."
+        )
         self.home_svc = self.node.create_service(
             SetUInt32,
             self.home_svc_name,
