@@ -459,7 +459,22 @@ class DriveState(RosHalComponent):
         return rsp
 
     def init_home_service(self):
-        # Home service
+        # /home_joint triggers the drive's CiA 402 homing procedure (method 35),
+        # which persists a new zero offset into drive EEPROM. Gate it behind an
+        # explicit launch param so it cannot be called accidentally; see the
+        # MASTERING_ENABLED launch arg in hal_hardware.launch.py.
+        if not self.get_ros_param("MASTERING_ENABLED", False):
+            self.home_svc = None
+            self.logger.info(
+                f"MASTERING_ENABLED is false; /{self.home_svc_name} service "
+                "NOT created."
+            )
+            return
+        self.logger.warning(
+            f"MASTERING_ENABLED is true: /{self.home_svc_name} service is "
+            "live. Calling it writes a new zero offset into the target "
+            "drive's EEPROM."
+        )
         self.home_svc = self.node.create_service(
             SetUInt32,
             self.home_svc_name,

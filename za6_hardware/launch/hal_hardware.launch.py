@@ -256,6 +256,17 @@ def generate_launch_description():
             description="Update rate for drive state service node (Hz).",
             default_value="10",
         ),
+        DeclareLaunchArgument(
+            "MASTERING_ENABLED",
+            description=(
+                "When true, creates the /home_joint service, which triggers "
+                "the drive's CiA 402 homing procedure (method 35) and "
+                "persists a new zero offset into the target drive's EEPROM. "
+                "Default false so the service cannot be called accidentally; "
+                "set true only during a deliberate mastering session."
+            ),
+            default_value="false",
+        ),
         # HAL configuration & controller manager
         HalConfig(
             namespace=LaunchConfiguration("namespace"),
@@ -374,6 +385,9 @@ def generate_launch_description():
                                 "drive_state_update_rate"
                             ),
                             timeout=LaunchConfiguration("drive_state_timeout"),
+                            MASTERING_ENABLED=LaunchConfiguration(
+                                "MASTERING_ENABLED"
+                            ),
                             joint_trajectory_topic=LaunchConfiguration(
                                 "joint_trajectory_topic"
                             ),
