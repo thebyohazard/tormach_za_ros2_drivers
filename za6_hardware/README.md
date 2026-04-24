@@ -59,3 +59,61 @@ following command.  The `<drive_pos>` argument is 0-5, corresponding
 to joints 1-6, respectively.
 
     ros2 run za6_hardware dump_params <drive_pos>
+
+## Mastering (`/home_joint`)
+
+> ⚠️  **Each call is forward-only — you can't un-call a homing.**  But
+> if you have a pre-mastering `dump_params` snapshot, the old zero is
+> recoverable: compute `shift = pre_6064h − post_6064h`, jog the joint
+> to drive-position `shift` in the new coordinate system, and call
+> `/home_joint` again. Empirically on SV660N hardware (2026-04-23,
+> J6), method 35's persistent effect is **resetting the encoder's
+> multi-turn counter** — *not* a write to object 607Ch as the YAML
+> comments and the ROS1 wrapper implied. The multi-turn counter is
+> encoder-internal state and cannot be restored via SDO, but the
+> single-turn encoder disc is physical and invariant, so the
+> coordinate-system shift is a known integer and the recovery is
+> arithmetic. Without a pre-mastering snapshot the old zero is
+> genuinely lost. See `src/jlp_documentation/za6_mastering_runbook.md`
+> §"Reverting a mastering call" for the procedure.
+
+**The service is gated behind `MASTERING_ENABLED`.** At default
+(false), `/home_joint` is not created on the ROS graph at all — you
+can't accidentally call it. Enable it only for a deliberate
+mastering session:
+
+    ros2 launch za6_hardware hal_hardware.launch.py MASTERING_ENABLED:=true
+
+Procedure (mastering a single joint; J6 shown):
+
+1. Jog the joint to the pose you want to call "zero." Verify visually.
+2. Launch with `MASTERING_ENABLED:=true`. Confirm the service now exists:
+
+       ros2 service list | grep home_joint
+
+3. Snapshot all six drives and commit the dumps to git:
+
+       for i in 0 1 2 3 4 5; do
+         ros2 run za6_hardware dump_params $i \
+           > <path>/pre/drive${i}_$(date +%Y-%m-%dT%H-%M-%S).txt
+       done
+
+4. Enable drives (required — the service fails if drives are in
+   `SWITCH ON DISABLED`):
+
+       ros2 service call /enable_drives std_srvs/srv/Trigger
+
+5. Call the service with the **1-based joint index** (J6 → `data: 6`,
+   drive index is 5 internally):
+
+       ros2 service call /home_joint hal_hw_interface_msgs/srv/SetUInt32 "{data: 6}"
+
+6. Snapshot again (post/); commit and push.
+7. Verify in `/joint_states` or RViz that the joint reads ≈ 0 at the
+   target pose.
+8. Relaunch without `MASTERING_ENABLED` (or with it false). Confirm
+   the service is gone.
+
+See `src/jlp_documentation/za6_mastering_runbook.md` for the full
+runbook with gotchas, and `src/jlp_documentation/za6_mastering_chain.md`
+for the underlying analysis and the 2026-04-23 empirical result.
