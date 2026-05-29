@@ -162,6 +162,7 @@ def setup_safety_input_pins():
     logger.info('Connecting hal pins for safety input')
     hal.Signal("safety_input").link(hal.Pin("hal_io.safety_input"))
     hal.Signal("enabling_input").link(hal.Pin("hal_io.enabling_input"))
+    hal.Signal("joint1_sto").link(hal.Pin("hal_io.sto_active"))
     hal.Signal("max_vel_safety_scale").link(
         hal.Pin("hal_io.max_vel_safety_scale")
     )

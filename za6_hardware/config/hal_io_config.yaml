@@ -45,6 +45,9 @@ publish_pins:
     hal_type: BIT
   din16:
     hal_type: BIT
+  sto_active:    # SV660N STO function triggered (joint 1; all drives share chain).
+                 # TRUE = E-stop pressed OR reset not latched; FALSE = safe to enable.
+    hal_type: BIT
 subscribe_pins:
   # subscribe_pins values from ROS topic copied to HAL output pin
   # valid keys:
