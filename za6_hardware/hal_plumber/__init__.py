@@ -104,6 +104,12 @@ class HALPlumber(HALPlumberBase):
             self.joints.append(joint)
             joint.setup_hal()
 
+        # - Link joint1's STO bit to hal_io for ROS gating of /enable_drives.
+        #   All SV660N drives share the cabinet STO chain, so joint1 is
+        #   representative. Must run after joint.setup_hal() creates joint1_sto.
+        if "joint1_sto" in hal.signals:
+            hal.Signal("joint1_sto").link(hal.Pin("hal_io.sto_active"))
+
         # - Load the latency comp
         self.setup_latency()
 
