@@ -44,6 +44,23 @@
       # ./src/joint_trajectory_controller.cpp:67)
       allow_nonzero_velocity_at_trajectory_end: false
 
+      # Trajectory tracking + goal tolerances. Without these, JTC reports
+      # SUCCESSFUL as soon as the trajectory time elapses regardless of
+      # whether the arm physically tracked the path (e.g. drives disabled
+      # silently report success because state never reaches the goal but
+      # nothing checks). `trajectory` aborts mid-execution if any joint
+      # falls outside tolerance during the path; `goal` is checked at
+      # trajectory end.
+      constraints:
+        goal_time: 0.5                   # seconds of slack past trajectory end
+        stopped_velocity_tolerance: 0.01  # radians per second
+        joint_1: { trajectory: 0.05, goal: 0.01 }  # radians
+        joint_2: { trajectory: 0.05, goal: 0.01 }  # radians
+        joint_3: { trajectory: 0.05, goal: 0.01 }  # radians
+        joint_4: { trajectory: 0.05, goal: 0.01 }  # radians
+        joint_5: { trajectory: 0.05, goal: 0.01 }  # radians
+        joint_6: { trajectory: 0.05, goal: 0.01 }  # radians
+
   streaming_controller:
     ros__parameters:
       joints:
