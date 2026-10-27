@@ -29,7 +29,7 @@ workspace, e.g.  `WSDIR=~/tormach_za_ros2_ws`.
 
     mkdir -p $WSDIR/src
     cd $WSDIR
-    git clone https://github.com/tormach/tormach_za_ros2_drivers.git \
+    git clone https://github.com/thebyohazard/tormach_za_ros2_drivers.git \
         src/tormach_za_ros2_drivers
     ./src/tormach_za_ros2_drivers/devel_scripts/docker-dev.sh -b
 
@@ -109,6 +109,15 @@ logs.
 
 Read the `README.md` files in the various `za6_*` source packages for
 more information about available robot controls.
+
+### Stopping the launch
+
+Ctrl-C does not stop every node.  Usually `robot_state_publisher`
+survives.  After stopping, look for leftover ROS processes and kill
+them before launching again:
+
+    pgrep -af 'ros|robot_state_publisher'
+    pkill -f robot_state_publisher
 
 ## Restore ROS 1 compatibility
 

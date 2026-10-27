@@ -74,7 +74,7 @@ to joints 1-6, respectively.
 > single-turn encoder disc is physical and invariant, so the
 > coordinate-system shift is a known integer and the recovery is
 > arithmetic. Without a pre-mastering snapshot the old zero is
-> genuinely lost. See `src/jlp_documentation/za6_mastering_runbook.md`
+> genuinely lost. See [`doc/mastering_runbook.md`](doc/mastering_runbook.md)
 > §"Reverting a mastering call" for the procedure.
 
 **The service is gated behind `MASTERING_ENABLED`.** At default
@@ -114,6 +114,5 @@ Procedure (mastering a single joint; J6 shown):
 8. Relaunch without `MASTERING_ENABLED` (or with it false). Confirm
    the service is gone.
 
-See `src/jlp_documentation/za6_mastering_runbook.md` for the full
-runbook with gotchas, and `src/jlp_documentation/za6_mastering_chain.md`
-for the underlying analysis and the 2026-04-23 empirical result.
+See [`doc/mastering_runbook.md`](doc/mastering_runbook.md) for the
+full runbook with gotchas.
