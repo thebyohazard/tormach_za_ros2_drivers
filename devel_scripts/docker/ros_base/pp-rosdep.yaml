@@ -22,6 +22,11 @@ oxygen-icon-theme:
 
 # Python packages not in rosdistro yet
 # https://github.com/ros/rosdistro/blob/master/rosdep/python.yaml
+# - python-fysom:  rosdistro dropped its Python 2 keys (ros/rosdistro#51720),
+#   but hw_device_mgr still declares this one
+python-fysom:
+  debian: [python3-fysom]
+  ubuntu: [python3-fysom]
 python-parso:
   debian:
     buster: [python-parso]
