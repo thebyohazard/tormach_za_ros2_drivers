@@ -71,5 +71,46 @@ apt-get install -y \
     sudo
 echo "%robotusers ALL=(ALL) NOPASSWD: ALL" >/etc/sudoers.d/passwordless
 
+# IK solver plugins (used by MoveIt on dist and devel)
+apt-get install -y \
+    ros-${ROS_DISTRO}-pick-ik \
+    ros-${ROS_DISTRO}-trac-ik-kinematics-plugin
+
+# On-robot diagnostics and basic shell tools (useful in dist and devel)
+apt-get install -y \
+    bash-completion \
+    dnsutils \
+    file \
+    htop \
+    iproute2 \
+    iputils-ping \
+    lsof \
+    net-tools \
+    netcat-openbsd \
+    psmisc \
+    strace \
+    traceroute \
+    x11-utils \
+    x11-xserver-utils
+
+# Ensure bash-completion is sourced for interactive shells.
+# Minimal Docker base images often ship /etc/bash.bashrc with the
+# completion-sourcing block commented out, which silently disables tab
+# completion for apt, git, etc.  Match only uncommented lines, or the
+# commented-out stock block counts as already enabled.
+if ! grep -q '^[^#]*bash_completion' /etc/bash.bashrc; then
+    cat >>/etc/bash.bashrc <<'EOF'
+
+# Enable bash completion in interactive shells
+if ! shopt -oq posix; then
+  if [ -f /usr/share/bash-completion/bash_completion ]; then
+    . /usr/share/bash-completion/bash_completion
+  elif [ -f /etc/bash_completion ]; then
+    . /etc/bash_completion
+  fi
+fi
+EOF
+fi
+
 # Install CycloneDDS config
 cp -a cyclonedds.xml /etc/

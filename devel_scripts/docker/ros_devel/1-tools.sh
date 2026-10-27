@@ -26,3 +26,30 @@ apt-get install -y \
 # install nano
 apt-get install -y \
     nano
+
+# Shell quality-of-life tools (devel only)
+apt-get install -y \
+    fd-find \
+    jq \
+    less \
+    ripgrep \
+    tmux \
+    tree
+
+# ROS GUI and debug tools (devel only)
+apt-get install -y \
+    ros-${ROS_DISTRO}-demo-nodes-cpp \
+    ros-${ROS_DISTRO}-foxglove-bridge \
+    ros-${ROS_DISTRO}-plotjuggler-ros \
+    ros-${ROS_DISTRO}-rqt \
+    ros-${ROS_DISTRO}-rqt-common-plugins \
+    ros-${ROS_DISTRO}-rqt-controller-manager \
+    ros-${ROS_DISTRO}-rqt-joint-trajectory-controller \
+    ros-${ROS_DISTRO}-rviz2 \
+    ros-${ROS_DISTRO}-topic-tools
+
+# Deps of other workspace packages commonly built inside the container,
+# which the image's rosdep pass (za6_* packages only) doesn't see
+# - tf_transformations:  Python TF math, e.g. for jogging GUIs
+apt-get install -y \
+    ros-${ROS_DISTRO}-tf-transformations

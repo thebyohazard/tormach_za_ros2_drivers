@@ -282,8 +282,9 @@ IMAGE_VERSION_CURRENT_MINOR="$(compute_image_minor_version)"
 ###########################
 
 # Set up Docker image variables
-# - image name components
-IMAGE_BASE_ID=${IMAGE_BASE_ID:-tormach}
+# - image name components (not upstream's tormach/ name, so this fork's
+#   images can't be mistaken for or pushed to Tormach's registry)
+IMAGE_BASE_ID=${IMAGE_BASE_ID:-za6}
 IMAGE_REPO=${IMAGE_REPO:-ros2}
 ROS_DISTRO=${ROS_DISTRO:-${DEFAULT_ROS_DISTRO}}
 IMAGE_TYPE=${IMAGE_TYPE:-devel}
