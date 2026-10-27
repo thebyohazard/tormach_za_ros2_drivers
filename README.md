@@ -62,6 +62,9 @@ Additional container shells may be started in new terminals.
 
     docker exec -itu $USER ros2-devel bash
 
+Run `sudo apt update` before installing packages in the container; this
+also enables apt tab completion.
+
 ### Build the workspace
 
 From within the container, build the ROS workspace containing this
